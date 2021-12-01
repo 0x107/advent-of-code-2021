@@ -1,0 +1,78 @@
+# Day 1: Sonar Sweep
+
+## Introduction
+
+As the submarine drops below the surface of the ocean, it automatically performs a sonar sweep of the nearby sea floor. On a small screen, the sonar sweep report (your puzzle input) appears: each line is a measurement of the sea floor depth as the sweep looks further and further away from the submarine.
+
+[https://adventofcode.com/2021/day/1](https://adventofcode.com/2021/day/1)
+
+## Code
+
+```elixir
+defmodule SonarSweep do
+  def depthIncreases(data, acc \\ 0)
+
+  def depthIncreases([first_depth, second_depth | tail], acc) when second_depth > first_depth,
+    do: depthIncreases([second_depth | tail], acc + 1)
+
+  def depthIncreases([first_depth, second_depth | tail], acc) when second_depth <= first_depth,
+    do: depthIncreases([second_depth | tail], acc)
+
+  def depthIncreases(_data, acc), do: acc
+
+  def slidingWindows(data, acc \\ [])
+
+  def slidingWindows([first_depth, second_depth, third_depth | tail], acc) do
+    slidingWindows([second_depth, third_depth] ++ tail, [
+      first_depth + second_depth + third_depth | acc
+    ])
+  end
+
+  def slidingWindows(_data, acc), do: Enum.reverse(acc)
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: true
+
+  test "sonar sweeps" do
+    data = [199, 200, 208, 210, 200, 207, 240, 269, 260, 263]
+    assert SonarSweep.depthIncreases(data) == 7
+  end
+
+  test "sliding window" do
+    data = [199, 200, 208, 210, 200, 207, 240, 269, 260, 263]
+    assert [607, 618, 618 | _] = SonarSweep.slidingWindows(data)
+  end
+end
+
+ExUnit.run()
+```
+
+## Solution
+
+```elixir
+{:ok, file_data} =
+  File.read("/Users/matthias/Projekte/advent-of-code-2021/input_data/day01-sonar-sweep.txt")
+
+input_data =
+  file_data
+  |> String.split("\n")
+  |> Enum.map(&String.to_integer/1)
+```
+
+```elixir
+# First Part
+SonarSweep.depthIncreases(input_data)
+```
+
+```elixir
+# Second Part
+SonarSweep.slidingWindows(input_data)
+|> SonarSweep.depthIncreases()
+```
