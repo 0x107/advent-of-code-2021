@@ -1,0 +1,115 @@
+# Day 2: Dive!
+
+## Introduction
+
+Now, you need to figure out how to pilot this thing.
+
+It seems like the submarine can take a series of commands like forward 1, down 2, or up 3:
+
+* forward X increases the horizontal position by X units.
+* down X increases the depth by X units.
+* up X decreases the depth by X units.
+
+Note that since you're on a submarine, down and up affect your depth, and so they have the opposite result of what you might expect.
+
+### Part 2
+
+In addition to horizontal position and depth, you'll also need to track a third value, aim, which also starts at 0. The commands also mean something entirely different than you first thought:
+
+* down X increases your aim by X units.
+* up X decreases your aim by X units.
+* forward X does two things:
+* It increases your horizontal position by X units.
+* It increases your depth by your aim multiplied by X.
+
+[https://adventofcode.com/2021/day/2](https://adventofcode.com/2021/day/2)
+
+## Code
+
+```elixir
+defmodule Dive do
+  def navigateSequence(sequence) do
+    Enum.reduce(sequence, {0, 0}, fn {command, value}, acc ->
+      Dive.navigate(command, value, acc)
+    end)
+  end
+
+  def navigate(command, value, position \\ {0, 0})
+  def navigate(:forward, value, {horizontal, depth}), do: {horizontal + value, depth}
+  def navigate(:down, value, {horizontal, depth}), do: {horizontal, depth + value}
+  def navigate(:up, value, {horizontal, depth}), do: {horizontal, max(0, depth - value)}
+end
+
+defmodule DiveExt do
+  def navigateSequence(sequence) do
+    Enum.reduce(sequence, {0, 0, 0}, fn {command, value}, acc ->
+      DiveExt.navigate(command, value, acc)
+    end)
+  end
+
+  def navigate(command, value, position \\ {0, 0, 0})
+
+  def navigate(:forward, value, {horizontal, depth, aim}),
+    do: {horizontal + value, max(0, depth + aim * value), aim}
+
+  def navigate(:down, value, {horizontal, depth, aim}), do: {horizontal, depth, aim + value}
+  def navigate(:up, value, {horizontal, depth, aim}), do: {horizontal, depth, aim - value}
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: true
+
+  test "navigate" do
+    data = [{:forward, 5}, {:down, 5}, {:forward, 8}, {:up, 3}, {:down, 8}, {:forward, 2}]
+    position = Dive.navigateSequence(data)
+    assert position == {15, 10}
+  end
+
+  test "navigate with aim" do
+    data = [{:forward, 5}, {:down, 5}, {:forward, 8}, {:up, 3}, {:down, 8}, {:forward, 2}]
+    position = DiveExt.navigateSequence(data)
+    assert {15, 60, _} = position
+  end
+end
+
+ExUnit.run()
+```
+
+## Solution
+
+```elixir
+{:ok, file_data} =
+  File.read("/Users/matthias/Projekte/advent-of-code-2021/input_data/day02-dive.txt")
+
+input_data =
+  file_data
+  |> String.split("\n")
+  |> Enum.map(&String.split(&1, " "))
+  |> Enum.map(fn [position, value] ->
+    depth = String.to_integer(value)
+
+    case position do
+      "forward" -> {:forward, depth}
+      "up" -> {:up, depth}
+      "down" -> {:down, depth}
+    end
+  end)
+```
+
+```elixir
+# First Part
+{horizontal, depth} = Dive.navigateSequence(input_data)
+result = horizontal * depth
+```
+
+```elixir
+# Second Part
+{horizontal, depth, _aim} = DiveExt.navigateSequence(input_data)
+result = horizontal * depth
+```
