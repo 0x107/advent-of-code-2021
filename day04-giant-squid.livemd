@@ -1,0 +1,186 @@
+# Day 4: Giant Squid
+
+## Introduction
+
+You're already almost 1.5km (almost a mile) below the surface of the ocean, already so deep that you can't see any sunlight. What you can see, however, is a giant squid that has attached itself to the outside of your submarine.
+
+Maybe it wants to play bingo?
+
+Bingo is played on a set of boards each consisting of a 5x5 grid of numbers. Numbers are chosen at random, and the chosen number is marked on all boards on which it appears. (Numbers may not appear on all boards.) If all numbers in any row or any column of a board are marked, that board wins. (Diagonals don't count.)
+
+### Part 2
+
+On the other hand, it might be wise to try a different strategy: let the giant squid win.
+
+You aren't sure how many bingo boards a giant squid could play at once, so rather than waste time counting its arms, the safe thing to do is to figure out which board will win last and choose that one. That way, no matter which boards it picks, it will win for sure.
+
+[https://adventofcode.com/2021/day/4](https://adventofcode.com/2021/day/4)
+
+## Code
+
+```elixir
+defmodule Day4 do
+  def taskPartOne(numbers, fields) do
+    {_numbers, _fields, result} = find_matching_boards(numbers, fields, :first)
+
+    result
+    |> List.first()
+  end
+
+  defp find_matching_boards(numbers, fields, match_option) do
+    numbers
+    |> Enum.reduce_while({MapSet.new(), fields, []}, fn number, {numbers, fields, bingos} ->
+      new_numbers = MapSet.put(numbers, number)
+
+      results =
+        fields
+        |> Enum.map(&{&1, checkField(new_numbers, &1)})
+
+      winning_fields =
+        results
+        |> Enum.map(fn {_field, result} -> result end)
+        |> Enum.filter(&(&1 != nil))
+
+      losing_fields =
+        results
+        |> Enum.filter(fn {_field, result} -> result == nil end)
+        |> Enum.map(fn {field, _result} -> field end)
+
+      case winning_fields do
+        [] ->
+          {:cont, {new_numbers, fields, bingos}}
+
+        winning_fields ->
+          new_bingos =
+            winning_fields
+            |> Enum.map(fn {_matched_row, remaining_rows} -> remaining_rows end)
+            |> Enum.map(fn rows ->
+              rows
+              |> List.flatten()
+              |> Enum.filter(&(MapSet.member?(MapSet.new(new_numbers), &1) == false))
+              |> Enum.reduce(0, &Kernel.+/2)
+              |> Kernel.then(&(&1 * number))
+            end)
+
+          acc = {new_numbers, losing_fields, bingos ++ new_bingos}
+
+          case match_option do
+            :first -> {:halt, acc}
+            :last -> {:cont, acc}
+          end
+      end
+    end)
+  end
+
+  defp checkField(numbers, field) do
+    numbers_map = MapSet.new(numbers)
+    matching_row = checkRows(numbers_map, field)
+
+    # transpose 
+    transposed_field =
+      field
+      |> List.zip()
+      |> Enum.map(&Tuple.to_list/1)
+
+    matching_column = checkRows(numbers_map, transposed_field)
+
+    case {matching_row, matching_column} do
+      {nil, nil} -> nil
+      {row, nil} -> row
+      {nil, column} -> column
+      {row, _column} -> row
+    end
+  end
+
+  defp checkRows(numbers_map, field) do
+    grouped_rows =
+      field
+      |> Enum.group_by(&MapSet.subset?(MapSet.new(&1), numbers_map))
+
+    case grouped_rows do
+      %{true => [matching_row], false => not_matching_rows} -> {matching_row, not_matching_rows}
+      _ -> nil
+    end
+  end
+
+  def taskPartTwo(numbers, fields) do
+    {_numbers, _fields, result} = find_matching_boards(numbers, fields, :last)
+
+    result
+    |> List.last()
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "part one" do
+    data = [[[22, 13, 17, 11], [8, 2, 23, 4], [21, 9, 14, 16], [6, 10, 3, 18]]]
+    assert Day4.taskPartOne([22, 8, 21, 6], data) == 840
+    assert Day4.taskPartOne([17, 1, 3, 23, 14, 7], data) == 1960
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform([number_line | lines]) do
+    numbers =
+      number_line
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+
+    fields =
+      lines
+      |> Enum.drop_every(6)
+      |> Enum.chunk_every(5)
+      |> Enum.map(fn field ->
+        field
+        |> Enum.map(fn row ->
+          row
+          |> String.trim()
+          |> String.replace("  ", " ")
+          |> String.split(" ")
+          |> Enum.map(&String.to_integer/1)
+        end)
+      end)
+
+    {numbers, fields}
+  end
+end
+
+{numbers, fields} =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day04-giant-squid.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+41668 = Day4.taskPartOne(numbers, fields)
+```
+
+```elixir
+# Second Part
+10478 = Day4.taskPartTwo(numbers, fields)
+```
