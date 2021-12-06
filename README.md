@@ -5,3 +5,4 @@
 - [Day 3: Binary Diagnostic](day-03-binary-diagnostic.livemd)
 - [Day 4: Giant Squid](day-04-giant-squid.livemd)
 - [Day 5: Hydrothermal Venture](day05-hydrothermal-venture.livemd)
+- [Day 6: Laternfish](day06-lanternfish.livemd)

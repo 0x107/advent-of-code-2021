@@ -1,0 +1,114 @@
+<!-- vim: syntax=markdown -->
+
+# Day 6: Lanternfish
+
+## Introduction
+
+The sea floor is getting steeper. Maybe the sleigh keys got carried this way?
+
+A massive school of glowing lanternfish swims past. They must spawn quickly to reach such large numbers - maybe exponentially quickly? You should model their growth rate to be sure.
+
+[https://adventofcode.com/2021/day/6](https://adventofcode.com/2021/day/6)
+
+## Code
+
+```elixir
+defmodule Day6 do
+  def taskPartOne(days, swarm) do
+    1..days
+    |> Enum.reduce(swarm, fn _day, acc ->
+      simulate_generation(acc)
+    end)
+    |> Enum.count()
+  end
+
+  defp simulate_generation(generation, swarm \\ [])
+  defp simulate_generation([], swarm), do: swarm
+
+  defp simulate_generation([age | tail], swarm) when age == 0,
+    do: simulate_generation(tail, [8 | [6 | swarm]])
+
+  defp simulate_generation([age | tail], swarm), do: simulate_generation(tail, [age - 1 | swarm])
+
+  def taskPartTwo(days, swarm) do
+    generation_counts =
+      swarm
+      |> Enum.frequencies()
+
+    1..days
+    |> Enum.reduce(generation_counts, fn _day, acc ->
+      for gen <- 0..8, into: %{} do
+        case gen do
+          6 -> {gen, Map.get(acc, 0, 0) + Map.get(acc, 7, 0)}
+          8 -> {gen, Map.get(acc, 0, 0)}
+          n -> {gen, Map.get(acc, n + 1, 0)}
+        end
+      end
+    end)
+    |> Enum.reduce(0, fn {_k, v}, acc -> acc + v end)
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "part one" do
+    data = [3, 4, 3, 1, 2]
+    assert Day6.taskPartOne(80, data) == 5934
+  end
+
+  test "part two" do
+    data = [3, 4, 3, 1, 2]
+    assert Day6.taskPartTwo(256, data) == 26_984_457_539
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.map(fn line ->
+      line
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+    end)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day06-lanternfish.txt"
+  )
+  |> Importer.transform()
+  |> List.first()
+```
+
+## Solution
+
+```elixir
+# First Part
+379_114 = Day6.taskPartOne(80, input_data)
+```
+
+```elixir
+# Second Part
+1_702_631_502_303 = Day6.taskPartTwo(256, input_data)
+```
