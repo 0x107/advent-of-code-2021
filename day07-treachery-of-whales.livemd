@@ -1,0 +1,102 @@
+<!-- vim: syntax=markdown -->
+
+# Day 7: The Treachery of Whales
+
+## Introduction
+
+A giant whale has decided your submarine is its next meal, and it's much faster than you are. There's nowhere to run!
+
+Suddenly, a swarm of crabs (each in its own tiny submarine - it's too deep for them otherwise) zooms in to rescue you! They seem to be preparing to blast a hole in the ocean floor; sensors indicate a massive underground cave system just beyond where they're aiming!
+
+The crab submarines all need to be aligned before they'll have enough power to blast a large enough hole for your submarine to get through. However, it doesn't look like they'll be aligned before the whale catches you! Maybe you can help?
+
+[https://adventofcode.com/2021/day/7](https://adventofcode.com/2021/day/7)
+
+## Code
+
+```elixir
+defmodule Day7 do
+  def taskPartOne(data) do
+    calculate_cost(data)
+  end
+
+  def taskPartTwo(data) do
+    calculate_cost(data, &((&1 * &1 + &1) / 2))
+  end
+
+  def calculate_cost(positions, cost_func \\ &Function.identity/1) do
+    Enum.min(positions)..Enum.max(positions)
+    |> Enum.map(fn line ->
+      positions
+      |> Enum.reduce(0, fn position, acc ->
+        n = (position - line) |> abs()
+        acc + trunc(cost_func.(n))
+      end)
+    end)
+    |> Enum.min()
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "part one" do
+    data = [16, 1, 2, 0, 4, 2, 7, 1, 2, 14]
+    assert Day7.taskPartOne(data) == 37
+  end
+
+  test "part two" do
+    data = [16, 1, 2, 0, 4, 2, 7, 1, 2, 14]
+    assert Day7.taskPartTwo(data) == 168
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.map(fn line ->
+      line
+      |> String.split(",")
+      |> Enum.map(&String.to_integer/1)
+    end)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day07-treachery-of-whales.txt"
+  )
+  |> Importer.transform()
+  |> List.first()
+```
+
+## Solution
+
+```elixir
+# First Part
+331_067 = Day7.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+92_881_128 = Day7.taskPartTwo(input_data)
+```
