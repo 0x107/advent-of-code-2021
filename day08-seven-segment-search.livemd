@@ -1,0 +1,259 @@
+<!-- vim: syntax=markdown -->
+
+# Day 8: Seven Segment Search
+
+## Introduction
+
+You barely reach the safety of the cave when the whale smashes into the cave mouth, collapsing it. Sensors indicate another exit to this cave at a much greater depth, so you have no choice but to press on.
+
+As your submarine slowly makes its way through the cave system, you notice that the four-digit seven-segment displays in your submarine are malfunctioning; they must have been damaged during the escape. You'll be in a lot of trouble without them, so you'd better figure out what's wrong.
+
+[https://adventofcode.com/2021/day/8](https://adventofcode.com/2021/day/8)
+
+## Code
+
+```elixir
+defmodule Display do
+  defstruct pattern: [], digits: []
+end
+
+defmodule Day8 do
+  def taskPartOne(displays) do
+    displays
+    |> Enum.map(fn %Display{digits: digits} ->
+      frequencies =
+        digits
+        |> Enum.frequencies_by(&String.length/1)
+
+      # 2 => 1, 4 => 4, 3 => 7, 7 => 8
+      [2, 4, 3, 7]
+      |> Enum.map(&Map.get(frequencies, &1, 0))
+      |> Enum.reduce(0, &Kernel.+/2)
+    end)
+    |> Enum.reduce(0, &Kernel.+/2)
+  end
+
+  def taskPartTwo(displays) do
+    displays
+    |> Enum.map(fn %Display{pattern: pattern, digits: digits} ->
+      mapping =
+        pattern
+        |> create_mapping()
+
+      decode_numbers(mapping, digits)
+    end)
+    |> Enum.map(&Integer.undigits/1)
+    |> Enum.reduce(0, &Kernel.+/2)
+  end
+
+  def decode_numbers(mapping, numbers) do
+    numbers
+    |> Enum.map(fn number ->
+      number =
+        number
+        |> String.graphemes()
+        |> MapSet.new()
+
+      {_map, digit} = Enum.find(mapping, fn {k, _v} -> k == number end)
+      digit
+    end)
+  end
+
+  def create_mapping(pattern) do
+    map_counts =
+      pattern
+      |> Enum.map(&(&1 |> String.graphemes() |> MapSet.new()))
+      |> Enum.uniq()
+      |> Enum.group_by(&Enum.count/1)
+
+    [digit_1] = Map.get(map_counts, 2)
+    [digit_4] = Map.get(map_counts, 4)
+    [digit_7] = Map.get(map_counts, 3)
+    [digit_8] = Map.get(map_counts, 7)
+
+    set_l6 = Map.get(map_counts, 6)
+
+    digit_9 =
+      Enum.find(
+        set_l6,
+        &(MapSet.difference(&1, MapSet.union(digit_7, digit_4)) |> MapSet.size() == 1)
+      )
+
+    set_l6 = set_l6 |> Enum.filter(&(&1 != digit_9))
+
+    digit_0 =
+      Enum.find(set_l6, fn set ->
+        MapSet.union(set, digit_1) |> MapSet.size() == MapSet.size(set)
+      end)
+
+    [digit_6] = set_l6 |> Enum.filter(&(&1 != digit_0))
+
+    a = MapSet.difference(digit_7, digit_1)
+
+    d = MapSet.difference(digit_8, digit_0)
+
+    b =
+      MapSet.difference(digit_4, digit_1)
+      |> MapSet.difference(d)
+
+    g =
+      MapSet.difference(digit_9, digit_4)
+      |> MapSet.difference(digit_7)
+
+    e =
+      MapSet.difference(digit_8, digit_4)
+      |> MapSet.difference(digit_7)
+      |> MapSet.difference(g)
+
+    f =
+      digit_6
+      |> MapSet.difference(
+        a
+        |> MapSet.union(d)
+        |> MapSet.union(g)
+        |> MapSet.union(b)
+        |> MapSet.union(e)
+      )
+
+    c =
+      digit_8
+      |> MapSet.difference(
+        a
+        |> MapSet.union(b)
+        |> MapSet.union(d)
+        |> MapSet.union(g)
+        |> MapSet.union(b)
+        |> MapSet.union(e)
+        |> MapSet.union(f)
+      )
+
+    [
+      {[a, b, c, e, f, g], 0},
+      {[c, f], 1},
+      {[a, c, d, e, g], 2},
+      {[a, c, d, f, g], 3},
+      {[b, c, d, f], 4},
+      {[a, b, d, f, g], 5},
+      {[a, b, d, e, f, g], 6},
+      {[a, c, f], 7},
+      {[a, b, c, d, e, f, g], 8},
+      {[a, b, c, d, f, g], 9}
+    ]
+    |> Enum.map(fn {k, v} ->
+      map =
+        k
+        |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+
+      {map, v}
+    end)
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "part one" do
+    data = [
+      %Display{
+        digits: ["fdgacbe", "cefdb", "cefbgd", "gcbe"],
+        pattern: [
+          "be",
+          "cfbegad",
+          "cbdgef",
+          "fgaecd",
+          "cgeb",
+          "fdcge",
+          "agebfd",
+          "fecdb",
+          "fabcd",
+          "edb",
+          "fdgacbe",
+          "cefdb",
+          "cefbgd",
+          "gcbe"
+        ]
+      }
+    ]
+
+    assert Day8.taskPartOne(data) == 2
+  end
+
+  test "part two" do
+    data = [
+      %Display{
+        digits: ["cdfeb", "fcadb", "cdfeb", "cdbaf"],
+        pattern: [
+          "acedgfb",
+          "cdfbe",
+          "gcdfa",
+          "fbcad",
+          "dab",
+          "cefabd",
+          "cdfgeb",
+          "eafb",
+          "cagedb",
+          "ab"
+        ]
+      }
+    ]
+
+    assert Day8.taskPartTwo(data) == 5353
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.filter(&(&1 != ""))
+    |> Enum.map(&String.split(&1, "|"))
+    |> Enum.map(fn line ->
+      [pattern, digits] =
+        line
+        |> Enum.map(fn segments ->
+          segments
+          |> String.trim()
+          |> String.split(" ")
+        end)
+
+      %Display{pattern: pattern, digits: digits}
+    end)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day08-seven-segment-search.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+310 = Day8.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+915_941 = Day8.taskPartTwo(input_data)
+```
