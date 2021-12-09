@@ -1,0 +1,188 @@
+<!-- vim: syntax=markdown -->
+
+# Day 9: Smoke Basin
+
+## Introduction
+
+These caves seem to be lava tubes. Parts are even still volcanically active; small hydrothermal vents release smoke into the caves that slowly settles like rain.
+
+If you can model how the smoke flows through the caves, you might be able to avoid it and be that much safer. The submarine generates a heightmap of the floor of the nearby caves for you.
+
+[https://adventofcode.com/2021/day/9](https://adventofcode.com/2021/day/9)
+
+## Code
+
+```elixir
+defmodule Day9 do
+  def taskPartOne(data) do
+    matrix =
+      data
+      |> add_border()
+
+    matrix
+    |> find_local_minimum()
+    |> Enum.map(fn coord -> get_element(matrix, coord) + 1 end)
+    |> Enum.reduce(0, &Kernel.+/2)
+  end
+
+  defp get_element(matrix, {x, y}), do: matrix |> Enum.at(y) |> Enum.at(x)
+
+  def add_border(matrix) do
+    matrix =
+      matrix
+      |> Enum.map(&([:b | &1] ++ [:b]))
+
+    count = matrix |> List.first() |> Enum.count()
+    border_row = 1..count |> Enum.to_list() |> Enum.map(fn _x -> :b end)
+    [border_row | matrix] ++ [border_row]
+  end
+
+  defp find_local_minimum(matrix), do: do_find_local_minimum(matrix, matrix)
+
+  defp do_find_local_minimum(region_matrix, matrix, coord \\ {1, 1}, acc \\ [])
+
+  defp do_find_local_minimum(
+         [[a1, a2, a3 | tail_a], [b1, b2, b3 | tail_b], [c1, c2, c3 | tail_c] | tail_rows],
+         remaining_matrix,
+         {x, y},
+         acc
+       ) do
+    local_min =
+      [a1, a2, a3, b1, b3, c1, c2, c3]
+      |> Enum.all?(&(&1 > b2))
+
+    list = [[a2, a3 | tail_a], [b2, b3 | tail_b], [c2, c3 | tail_c] | tail_rows]
+
+    if local_min do
+      do_find_local_minimum(list, remaining_matrix, {x + 1, y}, [{x, y} | acc])
+    else
+      do_find_local_minimum(list, remaining_matrix, {x + 1, y}, acc)
+    end
+  end
+
+  defp do_find_local_minimum([[_, _], [_, _], [_, _] | _], [_ | tail_matrix], {_, y}, acc) do
+    do_find_local_minimum(tail_matrix, tail_matrix, {1, y + 1}, acc)
+  end
+
+  defp do_find_local_minimum(_, _, _, acc), do: acc
+
+  def taskPartTwo(data) do
+    matrix =
+      data
+      |> add_border()
+
+    matrix
+    |> find_local_minimum()
+    |> Enum.map(&find_basin(matrix, &1))
+    |> Enum.map(&MapSet.size/1)
+    |> Enum.sort(&Kernel.>/2)
+    |> Enum.take(3)
+    |> Enum.reduce(1, &Kernel.*/2)
+  end
+
+  def find_basin(matrix, local_minimum), do: do_find_basin(matrix, MapSet.new([local_minimum]))
+
+  defp do_find_basin(matrix, new_coords, basin \\ MapSet.new()) do
+    next_coords =
+      MapSet.difference(new_coords, basin)
+      |> Enum.reduce(MapSet.new(), fn {x, y}, new_coords ->
+        value = get_element(matrix, {x, y})
+
+        [{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}]
+        |> Enum.map(fn coord ->
+          element = get_element(matrix, coord)
+          if element > value and element < 9, do: coord, else: nil
+        end)
+        |> Enum.filter(&(&1 != nil))
+        |> MapSet.new()
+        |> MapSet.union(new_coords)
+      end)
+      |> MapSet.difference(basin)
+      |> MapSet.difference(new_coords)
+
+    basin = MapSet.union(basin, new_coords)
+
+    if MapSet.size(next_coords) == 0 do
+      basin
+    else
+      do_find_basin(matrix, next_coords, basin)
+    end
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  test "part one" do
+    data = [
+      [2, 1, 9, 9, 9, 4, 3, 2, 1, 0],
+      [3, 9, 8, 7, 8, 9, 4, 9, 2, 1],
+      [9, 8, 5, 6, 7, 8, 9, 8, 9, 2],
+      [8, 7, 6, 7, 8, 9, 6, 7, 8, 9],
+      [9, 8, 9, 9, 9, 6, 5, 6, 7, 8]
+    ]
+
+    assert Day9.taskPartOne(data) == 15
+  end
+
+  test "part two" do
+    data = [
+      [2, 1, 9, 9, 9, 4, 3, 2, 1, 0],
+      [3, 9, 8, 7, 8, 9, 4, 9, 2, 1],
+      [9, 8, 5, 6, 7, 8, 9, 8, 9, 2],
+      [8, 7, 6, 7, 8, 9, 6, 7, 8, 9],
+      [9, 8, 9, 9, 9, 6, 5, 6, 7, 8]
+    ]
+
+    assert Day9.taskPartTwo(data) == 1134
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.map(fn line ->
+      line
+      |> String.graphemes()
+      |> Enum.map(&String.to_integer/1)
+    end)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day09-smoke-basin.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+577 = Day9.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+1_069_200 = Day9.taskPartTwo(input_data)
+```

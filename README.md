@@ -8,3 +8,4 @@
 - [Day 6: Laternfish](day06-lanternfish.livemd)
 - [Day 7: The Treachery of Whales](day07-treachery-of-whales.livemd)
 - [Day 8: Seven Segment Search](day08-seven-segment-search.livemd)
+- [Day 9: Smoke Basin](day09-smoke-basin.livemd)
