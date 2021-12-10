@@ -1,0 +1,149 @@
+<!-- vim: syntax=markdown -->
+
+# Day 10: Syntax Scoring
+
+## Introduction
+
+You ask the submarine to determine the best route out of the deep-sea cave, but it only replies:
+
+`Syntax error in navigation subsystem on line: all of them`
+
+All of them?! The damage is worse than you thought.
+
+[https://adventofcode.com/2021/day/10](https://adventofcode.com/2021/day/10)
+
+## Code
+
+```elixir
+defmodule Day10 do
+  def check_line(line, stack \\ [])
+  def check_line(["(" | line], stack), do: check_line(line, [")" | stack])
+  def check_line(["{" | line], stack), do: check_line(line, ["}" | stack])
+  def check_line(["[" | line], stack), do: check_line(line, ["]" | stack])
+  def check_line(["<" | line], stack), do: check_line(line, [">" | stack])
+  def check_line([token | line], [token | stack]), do: check_line(line, stack)
+  def check_line([], []), do: :ok
+  def check_line([], stack), do: {:incomplete, stack}
+  def check_line([token | _], _), do: {:error, token}
+
+  def taskPartOne(data) do
+    data
+    |> Enum.map(&check_line/1)
+    |> Enum.frequencies()
+    |> Enum.reduce(0, fn {k, v}, acc ->
+      case k do
+        :ok -> acc
+        {:incomplete, _} -> acc
+        {:error, ")"} -> acc + v * 3
+        {:error, "]"} -> acc + v * 57
+        {:error, "}"} -> acc + v * 1197
+        {:error, ">"} -> acc + v * 25137
+      end
+    end)
+  end
+
+  def taskPartTwo(data) do
+    results =
+      data
+      |> Enum.map(&check_line/1)
+      |> Enum.map(fn result ->
+        case result do
+          :ok ->
+            nil
+
+          {:error, _} ->
+            nil
+
+          {:incomplete, stack} ->
+            stack
+            |> Enum.reduce(0, fn token, total ->
+              case token do
+                ")" -> total * 5 + 1
+                "]" -> total * 5 + 2
+                "}" -> total * 5 + 3
+                ">" -> total * 5 + 4
+              end
+            end)
+        end
+      end)
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.sort()
+
+    Enum.at(results, trunc(Enum.count(results) / 2))
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  @data """
+        [({(<(())[]>[[{[]{<()<>>
+        [(()[<>])]({[<{<<[]>>(
+        {([(<{}[<>[]}>{[]{[(<()>
+        (((({<>}<{<{<>}{[]{[]{}
+        [[<[([]))<([[{}[[()]]]
+        [{[{({}]{}}([{[{{{}}([]
+        {<[[]]>}<{[{[{[]{()[[[]
+        [<(<(<(<{}))><([]([]()
+        <{([([[(<>()){}]>(<<{{
+        <{([{{}}[<[[[<>{}]]]>[]]
+        """
+        |> String.split("\n")
+        |> Enum.map(&String.graphemes/1)
+
+  test "part one" do
+    assert Day10.taskPartOne(@data) == 26397
+  end
+
+  test "part two" do
+    assert Day10.taskPartTwo(@data) == 288_957
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.map(fn line ->
+      line
+      |> String.graphemes()
+    end)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day10-syntax-scoring.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+392_421 = Day10.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+2_769_449_099 = Day10.taskPartTwo(input_data)
+```

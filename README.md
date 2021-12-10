@@ -9,3 +9,4 @@
 - [Day 7: The Treachery of Whales](day07-treachery-of-whales.livemd)
 - [Day 8: Seven Segment Search](day08-seven-segment-search.livemd)
 - [Day 9: Smoke Basin](day09-smoke-basin.livemd)
+- [Day 10: Syntax Scoring](day10-syntax-scoring.livemd)
