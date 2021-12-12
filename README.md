@@ -10,3 +10,4 @@
 - [Day 8: Seven Segment Search](day08-seven-segment-search.livemd)
 - [Day 9: Smoke Basin](day09-smoke-basin.livemd)
 - [Day 10: Syntax Scoring](day10-syntax-scoring.livemd)
+- [Day 11: Dumbo Octopus](day11-dumbo-octopus.livemd)

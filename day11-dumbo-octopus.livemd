@@ -1,0 +1,202 @@
+<!-- vim: syntax=markdown -->
+
+# Day 11: Dumbo Octopus
+
+## Introduction
+
+You enter a large cavern full of rare bioluminescent dumbo octopuses! They seem to not like the Christmas lights on your submarine, so you turn them off for now.
+
+There are 100 octopuses arranged neatly in a 10 by 10 grid. Each octopus slowly gains energy over time and flashes brightly for a moment when its energy is full. Although your lights are off, maybe you could navigate through the cave without disturbing the octopuses if you could predict when the flashes of light will happen.
+
+[https://adventofcode.com/2021/day/11](https://adventofcode.com/2021/day/11)
+
+## Code
+
+```elixir
+defmodule Day11 do
+  def taskPartOne(data) do
+    n = Enum.count(data)
+    dimension = {n, n}
+
+    simulate_steps(data, 100, dimension)
+  end
+
+  defp get_element(matrix, i, j) when i >= 1 and j >= 1,
+    do: matrix |> Enum.at(i - 1) |> Enum.at(j - 1)
+
+  defp update_element(matrix, {i, j}, func) when i >= 1 and j >= 1 do
+    matrix
+    |> List.update_at(i - 1, fn row ->
+      List.update_at(row, j - 1, func)
+    end)
+  end
+
+  defp simulate_steps(matrix, steps, dimension, acc \\ 0)
+  defp simulate_steps(_matrix, 0, _dimension, acc), do: acc
+
+  defp simulate_steps(matrix, remaining_steps, dimension, acc) do
+    {matrix, count} =
+      matrix
+      |> Enum.map(fn row -> Enum.map(row, &(&1 + 1)) end)
+      |> simulate_flashes(dimension)
+
+    simulate_steps(matrix, remaining_steps - 1, dimension, acc + count)
+  end
+
+  defp simulate_flashes(matrix, dimension, acc \\ {MapSet.new(), 0})
+
+  defp simulate_flashes(matrix, {n, m}, {already_flashed, count}) do
+    current_flashes =
+      for i <- 1..n, j <- 1..m, into: MapSet.new() do
+        value = get_element(matrix, i, j)
+
+        cond do
+          value > 9 -> {i, j}
+          true -> nil
+        end
+      end
+
+    current_flashes =
+      current_flashes
+      |> MapSet.difference(already_flashed)
+      |> Enum.filter(&(&1 != nil))
+
+    matrix =
+      current_flashes
+      |> Enum.reduce(matrix, fn coord, matrix ->
+        update_element(matrix, coord, fn _el -> 0 end)
+      end)
+
+    if Enum.count(current_flashes) > 0 do
+      already_flashed = MapSet.union(already_flashed, MapSet.new(current_flashes))
+      matrix = update_adjacent_octopuses(matrix, current_flashes, already_flashed)
+      count = count + Enum.count(current_flashes)
+      simulate_flashes(matrix, {n, m}, {already_flashed, count})
+    else
+      {matrix, count}
+    end
+  end
+
+  defp update_adjacent_octopuses(matrix, flashes, already_flashed) do
+    next_flashes =
+      flashes
+      |> Enum.reduce([], fn {x, y}, acc ->
+        [
+          {x - 1, y - 1},
+          {x, y - 1},
+          {x + 1, y - 1},
+          {x - 1, y},
+          {x + 1, y},
+          {x - 1, y + 1},
+          {x, y + 1},
+          {x + 1, y + 1}
+        ] ++ acc
+      end)
+      |> Enum.filter(fn {x, y} -> x > 0 and y > 0 end)
+      |> Enum.filter(&(MapSet.member?(already_flashed, &1) == false))
+
+    matrix =
+      next_flashes
+      |> Enum.reduce(matrix, fn coord, matrix ->
+        update_element(matrix, coord, fn value -> value + 1 end)
+      end)
+
+    matrix
+  end
+
+  def taskPartTwo(data) do
+    n = Enum.count(data)
+    dimension = {n, n}
+
+    find_sync_step(data, dimension)
+  end
+
+  defp find_sync_step(matrix, {n, m} = dimension, step \\ 1) do
+    {matrix, count} =
+      matrix
+      |> Enum.map(fn row -> Enum.map(row, &(&1 + 1)) end)
+      |> simulate_flashes(dimension)
+
+    if count == n * m do
+      step
+    else
+      find_sync_step(matrix, dimension, step + 1)
+    end
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  @data """
+        5483143223
+        2745854711
+        5264556173
+        6141336146
+        6357385478
+        4167524645
+        2176841721
+        6882881134
+        4846848554
+        5283751526
+        """
+        |> String.split("\n")
+        |> Enum.filter(&(&1 != ""))
+        |> Enum.map(&String.to_integer/1)
+        |> Enum.map(&Integer.digits/1)
+
+  test "part one" do
+    assert Day11.taskPartOne(@data) == 1656
+  end
+
+  test "part two" do
+    assert Day11.taskPartTwo(@data) == 195
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.filter(&(&1 != ""))
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.map(&Integer.digits/1)
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day11-dumbo-octopus.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+1659 = Day11.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+227 = Day11.taskPartTwo(input_data)
+```
