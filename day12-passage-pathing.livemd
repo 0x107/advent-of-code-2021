@@ -1,0 +1,196 @@
+<!-- vim: syntax=markdown -->
+
+# Day 12: Passage Pathing
+
+## Introduction
+
+With your submarine's subterranean subsystems subsisting suboptimally, the only way you're getting out of this cave anytime soon is by finding a path yourself. Not just a path - the only way to know if you've found the best path is to find all of them.
+
+[https://adventofcode.com/2021/day/12](https://adventofcode.com/2021/day/12)
+
+## Code
+
+```elixir
+defmodule Cave do
+  defstruct edges: MapSet.new(), type: :small
+
+  def add_edge_vertex(%Cave{edges: edges, type: type}, vertex) do
+    %Cave{edges: MapSet.put(edges, vertex), type: type}
+  end
+end
+
+defmodule GraphBuilder do
+  def build_graph(data) do
+    data
+    |> Enum.map(&String.split(&1, "-"))
+    |> Enum.reduce(%{}, fn [vertex1, vertex2], map ->
+      map
+      |> add_edge_to_cave(vertex1, vertex2)
+      |> add_edge_to_cave(vertex2, vertex1)
+    end)
+  end
+
+  def add_edge_to_cave(map, cave, edge) do
+    cave_atom = String.to_atom(cave)
+    edge_atom = String.to_atom(edge)
+
+    if Map.has_key?(map, cave_atom) do
+      Map.update!(map, cave_atom, &Cave.add_edge_vertex(&1, edge_atom))
+    else
+      type = if String.upcase(cave) == cave, do: :large, else: :small
+      Map.put(map, cave_atom, %Cave{edges: MapSet.new([edge_atom]), type: type})
+    end
+  end
+end
+```
+
+```elixir
+defmodule Day12 do
+  def taskPartOne(data) do
+    data
+    |> find_paths()
+    |> Enum.count()
+  end
+
+  def find_paths(
+        graph,
+        allow_small_twice \\ false,
+        vertex \\ :start,
+        excluded_vertices \\ MapSet.new([:start]),
+        current_path \\ [],
+        selected_for_double_visit \\ nil,
+        visited_twice \\ false
+      )
+
+  def find_paths(_, _, :end, _, path, _, _), do: [[:end | path] |> Enum.reverse()]
+  def find_paths(_, true, vertex, _, _, vertex, true), do: []
+
+  def find_paths(
+        graph,
+        allow_small_twice,
+        vertex,
+        excluded_vertices,
+        current_path,
+        selected_for_double_visit,
+        visited_twice
+      ) do
+    %Cave{edges: edges, type: type} = Map.get(graph, vertex)
+
+    visited_twice = vertex == selected_for_double_visit || visited_twice
+
+    current_path = [vertex | current_path]
+
+    excluded_vertices =
+      case type do
+        :small -> MapSet.put(excluded_vertices, vertex)
+        :large -> excluded_vertices
+      end
+
+    adjacent_vertices =
+      edges
+      |> MapSet.difference(excluded_vertices)
+
+    adjacent_vertices
+    |> Enum.reduce([], fn next_vertex, paths ->
+      additional_paths =
+        if type == :small && allow_small_twice && selected_for_double_visit == nil &&
+             vertex != :start do
+          excluded_vertices = MapSet.delete(excluded_vertices, vertex)
+          find_paths(graph, true, next_vertex, excluded_vertices, current_path, vertex, false)
+        else
+          []
+        end
+
+      sub_paths =
+        find_paths(
+          graph,
+          allow_small_twice,
+          next_vertex,
+          excluded_vertices,
+          current_path,
+          selected_for_double_visit,
+          visited_twice
+        )
+
+      additional_paths ++ sub_paths ++ paths
+    end)
+  end
+
+  def taskPartTwo(data) do
+    data
+    |> find_paths(true)
+    |> Enum.uniq()
+    |> Enum.count()
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  @data """
+        start-A
+        start-b
+        A-c
+        A-b
+        b-d
+        A-end
+        b-end
+        """
+        |> String.split("\n")
+        |> Enum.filter(&(&1 != ""))
+        |> GraphBuilder.build_graph()
+
+  test "part one" do
+    assert Day12.taskPartOne(@data) == 10
+  end
+
+  test "part two" do
+    assert Day12.taskPartTwo(@data) == 36
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    lines
+    |> Enum.filter(&(&1 != ""))
+    |> GraphBuilder.build_graph()
+  end
+end
+
+input_data =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day12-passage-pathing.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+4912 = Day12.taskPartOne(input_data)
+```
+
+```elixir
+# Second Part
+150_004 = Day12.taskPartTwo(input_data)
+```

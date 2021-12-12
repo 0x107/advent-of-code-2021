@@ -11,3 +11,4 @@
 - [Day 9: Smoke Basin](day09-smoke-basin.livemd)
 - [Day 10: Syntax Scoring](day10-syntax-scoring.livemd)
 - [Day 11: Dumbo Octopus](day11-dumbo-octopus.livemd)
+- [Day 12: Passage Pathing](day12-passage-pathing.livemd)
