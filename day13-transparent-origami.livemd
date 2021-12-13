@@ -1,0 +1,164 @@
+<!-- vim: syntax=markdown -->
+
+# Day 13: Transparent Origami
+
+## Introduction
+
+You reach another volcanically active part of the cave. It would be nice if you could do some kind of thermal imaging so you could tell ahead of time which caves are too hot to safely enter.
+
+Fortunately, the submarine seems to be equipped with a thermal camera! When you activate it, you are greeted with:
+
+> Congratulations on your purchase! To activate this infrared thermal imaging
+> camera system, please enter the code found on page 1 of the manual.
+
+Apparently, the Elves have never used this feature. To your surprise, you manage to find the manual; as you go to open it, page 1 falls out. It's a large sheet of transparent paper! The transparent paper is marked with random dots and includes instructions on how to fold it up.
+
+[https://adventofcode.com/2021/day/13](https://adventofcode.com/2021/day/13)
+
+## Code
+
+```elixir
+defmodule Day13 do
+  def taskPartOne(points, folds) do
+    fold(points, folds)
+    |> Enum.count()
+  end
+
+  defp fold(points, folds) do
+    folds
+    |> Enum.reduce(points, fn fold, points ->
+      case fold do
+        {:x, index} -> points |> Enum.map(fn {x, y} -> {fold_at(x, index), y} end)
+        {:y, index} -> points |> Enum.map(fn {x, y} -> {x, fold_at(y, index)} end)
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  def fold_at(point, fold) do
+    cond do
+      point < fold -> point
+      point > fold -> fold - (point - fold)
+    end
+  end
+
+  def taskPartTwo(points, folds) do
+    points = fold(points, folds)
+
+    {max_x, _} =
+      points
+      |> Enum.max_by(fn {x, _} -> x end)
+
+    {_, max_y} =
+      points
+      |> Enum.max_by(fn {_, y} -> y end)
+
+    points = MapSet.new(points)
+
+    for j <- 0..max_y, into: "" do
+      for i <- 0..(max_x + 1), into: "" do
+        cond do
+          i > max_x -> "\n"
+          MapSet.member?(points, {i, j}) -> "#"
+          true -> " "
+        end
+      end
+    end
+  end
+end
+```
+
+## Tests
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule Test do
+  use ExUnit.Case, async: false
+
+  @points [
+    {6, 10},
+    {0, 14},
+    {9, 10},
+    {0, 3},
+    {10, 4},
+    {4, 11},
+    {6, 0},
+    {6, 12},
+    {4, 1},
+    {0, 13},
+    {10, 12},
+    {3, 4},
+    {3, 0},
+    {8, 4},
+    {1, 10},
+    {2, 14},
+    {8, 10},
+    {9, 0}
+  ]
+
+  test "part one" do
+    assert Day13.taskPartOne(@points, [{:y, 7}, {:x, 5}]) == 16
+  end
+
+  test "part two" do
+    assert Day13.taskPartTwo(@points, [{:y, 7}, {:x, 5}]) == "#####\n#   #\n#   #\n#   #\n#####\n"
+  end
+end
+
+ExUnit.run()
+```
+
+## Import
+
+```elixir
+defmodule Importer do
+  def readFile(file_url) do
+    {:ok, file_data} = File.read(file_url)
+
+    file_data
+    |> String.split("\n")
+  end
+
+  def transform(lines) do
+    {points, instructions} =
+      lines
+      |> Enum.filter(&(&1 != ""))
+      |> Enum.reduce({[], []}, fn line, {points, instructions} ->
+        cond do
+          line =~ ~r/[0-9]*,[0-9]*/ ->
+            [x, y] = line |> String.split(",") |> Enum.map(&String.to_integer/1)
+            {[{x, y} | points], instructions}
+
+          true ->
+            %{"axis" => axis, "index" => index} =
+              ~r/fold along (?<axis>x|y)=(?<index>[0-9]*)/
+              |> Regex.named_captures(line)
+
+            {points, [{String.to_atom(axis), String.to_integer(index)} | instructions]}
+        end
+      end)
+
+    {Enum.reverse(points), Enum.reverse(instructions)}
+  end
+end
+
+{input_points, input_folds} =
+  Importer.readFile(
+    "/Users/matthias/Projekte/advent-of-code-2021/input_data/day13-transparent-origami.txt"
+  )
+  |> Importer.transform()
+```
+
+## Solution
+
+```elixir
+# First Part
+Day13.taskPartOne(input_points, [input_folds |> List.first()])
+```
+
+```elixir
+# Second Part
+# JZGUAPRB
+Day13.taskPartTwo(input_points, input_folds) |> IO.puts()
+```
